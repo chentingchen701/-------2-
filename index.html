@@ -37,23 +37,71 @@
         </div>
     </nav>
 
+    <!-- 搜尋和篩選區塊 -->
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="搜尋商品名稱...">
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex gap-3">
+                    <div class="price-filter">
+                        <input type="number" id="minPrice" class="form-control" placeholder="最低價格">
+                    </div>
+                    <div class="price-filter">
+                        <input type="number" id="maxPrice" class="form-control" placeholder="最高價格">
+                    </div>
+                    <button class="btn btn-primary" onclick="applyFilters()">篩選</button>
+                    <button class="btn btn-secondary" onclick="resetFilters()">重置</button>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select id="categoryFilter" class="form-select">
+                    <option value="">所有分類</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
     <!-- 主要內容 -->
     <div class="container my-5">
         <h2 class="text-center mb-4">熱門商品</h2>
         <div id="products" class="row"></div>
-    </div>
-
-    <!-- 購物車側邊欄 -->
+    </div>    <!-- 購物車側邊欄 -->
     <div class="offcanvas offcanvas-end" id="cartSidebar">
         <div class="offcanvas-header">
-            <h5 class="offcanvas-title">購物車</h5>
+            <h5 class="offcanvas-title">
+                <i class="fas fa-shopping-cart me-2"></i>購物車
+                <span class="badge bg-primary ms-2" id="cartBadgeCount">0</span>
+            </h5>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body">
-            <div id="cartItems"></div>
-            <div class="cart-total">
-                <h5>總計: $<span id="cartTotal">0</span></h5>
-                <button class="btn btn-primary w-100" onclick="checkout()">結帳</button>
+            <div id="cartItems" class="mb-3"></div>
+            <div id="emptyCartMessage" class="text-center text-muted py-5" style="display: none;">
+                <i class="fas fa-shopping-basket fa-3x mb-3"></i>
+                <p>您的購物車是空的</p>
+            </div>
+            <div class="cart-summary">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>小計:</span>
+                    <span>$<span id="cartSubtotal">0</span></span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span>運費:</span>
+                    <span id="shippingFee">免費</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-3">
+                    <strong>總計:</strong>
+                    <strong>$<span id="cartTotal">0</span></strong>
+                </div>
+                <button class="btn btn-primary w-100 mb-2" onclick="checkout()">
+                    <i class="fas fa-credit-card me-2"></i>前往結帳
+                </button>
+                <button class="btn btn-outline-secondary w-100" onclick="clearCart()">
+                    <i class="fas fa-trash me-2"></i>清空購物車
+                </button>
             </div>
         </div>
     </div>
@@ -63,5 +111,54 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="products.js"></script>
     <script src="script.js"></script>
+
+    <!-- 商品詳情 Modal -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">商品詳情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="product-image-gallery">
+                                <img id="modalMainImage" class="img-fluid mb-3 rounded main-product-image" src="" alt="">
+                                <div class="d-flex justify-content-center gap-2 product-thumbnails">
+                                    <!-- 縮圖會由 JavaScript 動態生成 -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h3 id="modalProductName" class="mb-3"></h3>
+                            <div class="product-meta mb-3">
+                                <span class="badge bg-primary" id="modalCategory"></span>
+                                <span class="badge bg-success" id="modalStock"></span>
+                            </div>
+                            <h4 class="text-primary mb-3">$<span id="modalPrice"></span></h4>
+                            <p id="modalDescription" class="mb-4"></p>
+                            <div class="d-flex align-items-center gap-3 mb-4">
+                                <div class="input-group" style="width: 140px;">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="updateModalQuantity(-1)">-</button>
+                                    <input type="number" class="form-control text-center" id="modalQuantity" value="1" min="1">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="updateModalQuantity(1)">+</button>
+                                </div>
+                                <button class="btn btn-primary" id="modalAddToCart">
+                                    <i class="fas fa-cart-plus me-2"></i>加入購物車
+                                </button>
+                            </div>
+                            <div class="product-details">
+                                <h5 class="mb-3">商品特色</h5>
+                                <ul class="list-unstyled" id="modalFeatures">
+                                    <!-- 特色列表會由 JavaScript 動態生成 -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
