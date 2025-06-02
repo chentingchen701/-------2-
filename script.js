@@ -5,6 +5,15 @@ let cart = [];
 let currentProduct = null;
 let productModal = null;
 
+// 變數宣告
+let checkoutModal = null;
+let orderCompleteModal = null;
+
+// 個人化功能相關變數
+let wishlist = [];
+let viewHistory = [];
+let historyModal = null;
+
 // 當網頁載入完成時執行
 document.addEventListener('DOMContentLoaded', () => {
     initializeCategories();
@@ -17,6 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 初始化 Modal
     productModal = new bootstrap.Modal(document.getElementById('productModal'));
+
+    // 初始化結帳相關 Modal
+    checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+    orderCompleteModal = new bootstrap.Modal(document.getElementById('orderCompleteModal'));
+
+    // 初始化個人化功能
+    loadWishlist();
+    loadHistory();
+    historyModal = new bootstrap.Modal(document.getElementById('historyModal'));
 });
 
 // 顯示商品列表
@@ -142,7 +160,7 @@ function clearCart() {
     }
 }
 
-// 結帳功能
+// 更新結帳功能
 function checkout() {
     if (cart.length === 0) {
         alert('購物車是空的！');
@@ -160,6 +178,50 @@ function checkout() {
         return;
     }
 
+    // 更新結帳明細
+    updateCheckoutSummary();
+    
+    // 顯示結帳 Modal
+    checkoutModal.show();
+}
+
+// 更新結帳明細
+function updateCheckoutSummary() {
+    const checkoutItems = document.getElementById('checkoutItems');
+    const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const shipping = calculateShipping(subtotal);
+    const total = subtotal + shipping;
+
+    // 顯示訂單明細
+    checkoutItems.innerHTML = cart.map(item => `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <img src="${item.image}" alt="${item.name}" style="width: 50px; height: 50px; object-fit: cover;" class="me-2">
+                ${item.name} x ${item.quantity}
+            </div>
+            <div>$${item.price * item.quantity}</div>
+        </div>
+    `).join('');
+
+    // 更新金額
+    document.getElementById('checkoutSubtotal').textContent = subtotal;
+    document.getElementById('checkoutShipping').textContent = shipping;
+    document.getElementById('checkoutTotal').textContent = total;
+}
+
+// 計算運費
+function calculateShipping(subtotal) {
+    return subtotal >= 1000 ? 0 : 60;
+}
+
+// 確認訂單
+function confirmOrder() {
+    const form = document.getElementById('checkoutForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
     // 更新庫存
     cart.forEach(item => {
         const product = products.find(p => p.id === item.id);
@@ -168,12 +230,39 @@ function checkout() {
         }
     });
 
+    // 準備訂單摘要
+    const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const shipping = calculateShipping(subtotal);
+    const total = subtotal + shipping;
+    const orderNumber = generateOrderNumber();
+
+    // 更新訂單完成資訊
+    document.getElementById('orderSummary').innerHTML = `
+        <div class="mt-4">
+            <p class="mb-2">訂單編號：${orderNumber}</p>
+            <p class="mb-2">訂購金額：$${subtotal}</p>
+            <p class="mb-2">運費：$${shipping}</p>
+            <p class="mb-2"><strong>總計：$${total}</strong></p>
+        </div>
+    `;
+
     // 清空購物車
-    alert('訂單已成立！感謝您的購買。');
     cart = [];
     updateCart();
     saveCart();
-    displayProducts(); // 重新顯示商品列表以更新庫存狀態
+    displayProducts();
+
+    // 關閉結帳 Modal，顯示完成 Modal
+    checkoutModal.hide();
+    orderCompleteModal.show();
+}
+
+// 生成訂單編號
+function generateOrderNumber() {
+    const date = new Date();
+    const timestamp = date.getTime().toString().slice(-6);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return 'ORD' + timestamp + random;
 }
 
 // 初始化分類選項
@@ -190,6 +279,7 @@ function initializeCategories() {
 
 // 搜尋和篩選商品
 function applyFilters() {
+    showLoading();
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const minPrice = document.getElementById('minPrice').value;
     const maxPrice = document.getElementById('maxPrice').value;
@@ -204,7 +294,10 @@ function applyFilters() {
         return matchesSearch && matchesMinPrice && matchesMaxPrice && matchesCategory;
     });
 
-    displayFilteredProducts(filteredProducts);
+    // 使用 setTimeout 來模擬搜尋過程，提供更好的使用者體驗
+    setTimeout(() => {
+        displayFilteredProducts(filteredProducts);
+    }, 300);
 }
 
 // 重置所有篩選條件
@@ -218,36 +311,90 @@ function resetFilters() {
 
 // 顯示篩選後的商品
 function displayFilteredProducts(filteredProducts) {
+    showLoading();
     const productsContainer = document.getElementById('products');
+    
     if (filteredProducts.length === 0) {
         productsContainer.innerHTML = '<div class="col-12 text-center"><h3>沒有找到符合條件的商品</h3></div>';
+        hideLoading();
         return;
     }
 
     productsContainer.innerHTML = filteredProducts.map(product => `
         <div class="col-md-3 col-sm-6">
             <div class="card">
-                <img src="${product.image}" class="card-img-top product-img" alt="${product.name}">
+                <div class="position-relative">
+                    <img src="${product.image}" 
+                         class="card-img-top product-img" 
+                         alt="${product.name}"
+                         onload="handleImageLoad(this)"
+                         onclick="showProductDetails(${product.id})" 
+                         style="cursor: pointer;">
+                    <span class="filter-badge position-absolute top-0 end-0 m-2">
+                        ${product.category}
+                    </span>
+                    <button class="btn btn-sm position-absolute top-0 start-0 m-2 ${wishlist.includes(product.id) ? 'btn-danger' : 'btn-outline-danger'}"
+                            onclick="toggleWishlist(${product.id})">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">${product.name}</h5>
+                    <h5 class="card-title" style="cursor: pointer;" 
+                        onclick="showProductDetails(${product.id})">
+                        ${product.name}
+                    </h5>
                     <p class="card-text">${product.description}</p>
-                    <p class="card-text">價格: $${product.price}</p>
-                    <p class="card-text">庫存: ${product.stock}</p>
-                    <p class="card-text"><small class="text-muted">分類: ${product.category}</small></p>
-                    <button class="btn btn-primary" onclick="addToCart(${product.id})" 
+                    <p class="card-text">
+                        <strong>價格: $${product.price}</strong>
+                        <br>
+                        <small class="text-muted">庫存: ${product.stock}</small>
+                    </p>
+                    <button class="btn btn-primary w-100" 
+                            onclick="addToCart(${product.id})" 
                             ${product.stock === 0 ? 'disabled' : ''}>
-                        加入購物車
+                        ${product.stock === 0 ? '已售完' : '加入購物車'}
                     </button>
                 </div>
             </div>
         </div>
     `).join('');
+
+    // 確保所有圖片都載入完成後再隱藏載入動畫
+    const images = productsContainer.getElementsByTagName('img');
+    let loadedImages = 0;
+    
+    function checkAllImagesLoaded() {
+        loadedImages++;
+        if (loadedImages === images.length) {
+            hideLoading();
+        }
+    }
+
+    if (images.length === 0) {
+        hideLoading();
+    } else {
+        Array.from(images).forEach(img => {
+            if (img.complete) {
+                checkAllImagesLoaded();
+            } else {
+                img.addEventListener('load', checkAllImagesLoaded);
+                img.addEventListener('error', checkAllImagesLoaded);
+            }
+        });
+    }
 }
 
-// 顯示商品詳情
+// 優化商品詳情載入
 function showProductDetails(productId) {
+    showLoading();
     currentProduct = products.find(p => p.id === productId);
-    if (!currentProduct) return;
+    if (!currentProduct) {
+        hideLoading();
+        return;
+    }
+
+    // 添加到瀏覽歷史
+    addToHistory(productId);
 
     // 更新 Modal 內容
     document.getElementById('modalProductName').textContent = currentProduct.name;
@@ -286,62 +433,188 @@ function showProductDetails(productId) {
     // 重置數量
     document.getElementById('modalQuantity').value = 1;
 
-    // 顯示 Modal
-    productModal.show();
-}
-
-// 切換主圖片
-function changeMainImage(index) {
-    if (!currentProduct || !currentProduct.images[index]) return;
-    
+    // 處理圖片載入
     const mainImage = document.getElementById('modalMainImage');
-    mainImage.src = currentProduct.images[index];
-    
-    // 更新縮圖選中狀態
-    document.querySelectorAll('.product-thumbnails img').forEach((img, i) => {
-        img.classList.toggle('active', i === index);
+    let loadedImages = 0;
+    const totalImages = currentProduct.images.length + 1; // 主圖 + 縮圖
+
+    function checkModalImagesLoaded() {
+        loadedImages++;
+        if (loadedImages === totalImages) {
+            hideLoading();
+            productModal.show();
+        }
+    }
+
+    mainImage.onload = checkModalImagesLoaded;
+    currentProduct.images.forEach(img => {
+        const tempImage = new Image();
+        tempImage.onload = checkModalImagesLoaded;
+        tempImage.src = img;
     });
 }
 
-// 更新 Modal 中的商品數量
-function updateModalQuantity(change) {
-    const quantityInput = document.getElementById('modalQuantity');
-    const currentValue = parseInt(quantityInput.value);
-    const newValue = currentValue + change;
+// 通知提示功能
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    document.body.appendChild(toast);
     
-    if (newValue > 0 && newValue <= currentProduct.stock) {
-        quantityInput.value = newValue;
+    setTimeout(() => {
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 2000);
+    }, 100);
+}
+
+// 優化圖片載入
+function handleImageLoad(img) {
+    img.classList.add('loaded');
+}
+
+// 願望清單功能
+function loadWishlist() {
+    const savedWishlist = localStorage.getItem('wishlist');
+    if (savedWishlist) {
+        wishlist = JSON.parse(savedWishlist);
+        updateWishlistUI();
     }
 }
 
-// 帶數量的加入購物車函數
-function addToCartWithQuantity(productId, quantity) {
-    const product = products.find(p => p.id === productId);
-    if (!product || product.stock === 0) return;
+function saveWishlist() {
+    localStorage.setItem('wishlist', JSON.stringify(wishlist));
+    updateWishlistUI();
+}
 
-    const cartItem = cart.find(item => item.id === productId);
-    if (cartItem) {
-        if (cartItem.quantity + quantity <= product.stock) {
-            cartItem.quantity += quantity;
-        } else {
-            alert('已達到最大庫存量！');
-            return;
-        }
+function toggleWishlist(productId) {
+    const index = wishlist.indexOf(productId);
+    if (index === -1) {
+        wishlist.push(productId);
+        showToast('已加入願望清單！');
     } else {
-        cart.push({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            image: product.image,
-            quantity: quantity
-        });
+        wishlist.splice(index, 1);
+        showToast('已從願望清單移除！');
+    }
+    saveWishlist();
+}
+
+function updateWishlistUI() {
+    const wishlistItems = document.getElementById('wishlistItems');
+    const wishlistCount = document.getElementById('wishlistCount');
+    const wishlistBadgeCount = document.getElementById('wishlistBadgeCount');
+    const emptyWishlistMessage = document.getElementById('emptyWishlistMessage');
+
+    wishlistCount.textContent = wishlist.length;
+    wishlistBadgeCount.textContent = wishlist.length;
+
+    if (wishlist.length === 0) {
+        wishlistItems.innerHTML = '';
+        emptyWishlistMessage.style.display = 'block';
+        return;
     }
 
-    // 添加動畫效果
-    const cartButton = document.querySelector('.btn-outline-light');
-    cartButton.classList.add('add-to-cart-animation');
-    setTimeout(() => cartButton.classList.remove('add-to-cart-animation'), 500);
+    emptyWishlistMessage.style.display = 'none';
+    wishlistItems.innerHTML = wishlist.map(id => {
+        const product = products.find(p => p.id === id);
+        if (!product) return '';
+        return `
+            <div class="wishlist-item mb-3">
+                <div class="card">
+                    <div class="row g-0">
+                        <div class="col-4">
+                            <img src="${product.image}" class="img-fluid rounded-start" alt="${product.name}">
+                        </div>
+                        <div class="col-8">
+                            <div class="card-body">
+                                <h5 class="card-title">${product.name}</h5>
+                                <p class="card-text">$${product.price}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <button class="btn btn-sm btn-danger" onclick="toggleWishlist(${product.id})">
+                                        <i class="fas fa-heart-broken"></i> 移除
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" onclick="addToCart(${product.id})">
+                                        <i class="fas fa-cart-plus"></i> 加入購物車
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
-    updateCart();
-    saveCart();
+// 瀏覽歷史功能
+function loadHistory() {
+    const savedHistory = localStorage.getItem('viewHistory');
+    if (savedHistory) {
+        viewHistory = JSON.parse(savedHistory);
+    }
+}
+
+function saveHistory() {
+    localStorage.setItem('viewHistory', JSON.stringify(viewHistory));
+}
+
+function addToHistory(productId) {
+    // 移除重複的記錄
+    viewHistory = viewHistory.filter(id => id !== productId);
+    // 添加到開頭
+    viewHistory.unshift(productId);
+    // 限制記錄數量為20筆
+    if (viewHistory.length > 20) {
+        viewHistory.pop();
+    }
+    saveHistory();
+}
+
+function showHistory() {
+    const historyItems = document.getElementById('historyItems');
+    const emptyHistoryMessage = document.getElementById('emptyHistoryMessage');
+
+    if (viewHistory.length === 0) {
+        historyItems.innerHTML = '';
+        emptyHistoryMessage.style.display = 'block';
+    } else {
+        emptyHistoryMessage.style.display = 'none';
+        historyItems.innerHTML = viewHistory.map(id => {
+            const product = products.find(p => p.id === id);
+            if (!product) return '';
+            return `
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100">
+                        <img src="${product.image}" class="card-img-top history-img" alt="${product.name}">
+                        <div class="card-body">
+                            <h5 class="card-title">${product.name}</h5>
+                            <p class="card-text">$${product.price}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button class="btn btn-sm ${wishlist.includes(product.id) ? 'btn-danger' : 'btn-outline-danger'}"
+                                        onclick="toggleWishlist(${product.id})">
+                                    <i class="fas fa-heart"></i>
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="addToCart(${product.id})">
+                                    <i class="fas fa-cart-plus"></i> 加入購物車
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    historyModal.show();
+}
+
+function clearHistory() {
+    if (confirm('確定要清除所有瀏覽記錄嗎？')) {
+        viewHistory = [];
+        saveHistory();
+        showHistory();
+    }
 }

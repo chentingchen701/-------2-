@@ -11,6 +11,48 @@
 .product-img {
     height: 200px;
     object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.product-img.loaded {
+    opacity: 1;
+}
+
+/* 載入動畫 */
+.loading-spinner {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+}
+
+.loading-spinner::after {
+    content: '';
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    z-index: 999;
 }
 
 /* 購物車樣式 */
@@ -241,4 +283,118 @@
 
 .add-to-cart-animation {
     animation: addToCart 0.5s ease;
+}
+
+/* 優化手機版面配置 */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 15px;
+    }
+
+    .product-img {
+        height: 150px;
+    }
+
+    .cart-item {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 10px;
+    }
+
+    .cart-item img {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+
+    .cart-item-remove {
+        position: static;
+        margin-top: 10px;
+    }
+
+    .price-filter {
+        margin-bottom: 10px;
+    }
+
+    .modal-dialog {
+        margin: 10px;
+    }
+}
+
+/* 新增互動效果 */
+.btn {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn:active {
+    transform: scale(0.95);
+}
+
+.btn-primary:hover {
+    box-shadow: 0 2px 5px rgba(0,123,255,0.3);
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.15);
+    border-color: #80bdff;
+}
+
+/* 改善滾動效果 */
+html {
+    scroll-behavior: smooth;
+}
+
+/* 優化觸控體驗 */
+@media (hover: none) {
+    .card:hover {
+        transform: none;
+    }
+    
+    .btn:hover {
+        box-shadow: none;
+    }
+}
+
+/* 願望清單樣式 */
+.wishlist-item img {
+    height: 120px;
+    object-fit: cover;
+}
+
+.history-img {
+    height: 180px;
+    object-fit: cover;
+}
+
+/* 通知提示樣式 */
+.toast-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.toast-notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 動畫效果 */
+.btn-outline-danger:hover {
+    transform: scale(1.1);
+}
+
+.wishlist-item .card {
+    transition: transform 0.2s;
+}
+
+.wishlist-item .card:hover {
+    transform: translateY(-5px);
 }
