@@ -618,3 +618,15 @@ function clearHistory() {
         showHistory();
     }
 }
+
+// 顯示載入動畫
+function showLoading() {
+    document.querySelector('.loading-overlay').style.display = 'block';
+    document.querySelector('.loading-spinner').style.display = 'block';
+}
+
+// 隱藏載入動畫
+function hideLoading() {
+    document.querySelector('.loading-overlay').style.display = 'none';
+    document.querySelector('.loading-spinner').style.display = 'none';
+}
